@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Planta de Aceite – Austral Group</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f7fa; margin:0; }
+    header { background:#004f71; color:#fff; padding:1em; text-align:center; }
+    .content { max-width:95%; margin:20px auto; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+    h2 { color:#004f71; margin-top:0; }
+    table { width:100%; border-collapse:collapse; margin-top:15px; }
+    th, td { border:1px solid #ddd; padding:8px; text-align:left; }
+    th { background:#007fa3; color:white; }
+    tr:nth-child(even) { background:#f9f9f9; }
+    tr:hover { background:#eef6f9; }
+    footer { text-align:center; font-size:0.9em; color:#555; margin:20px; }
+  </style>
+</head>
+<body>
+  <header><h1>Planta de Aceite</h1></header>
+  <div class="content">
+    <h2>Herramientas y Materiales</h2>
+    <div id="tabla">Cargando...</div>
+  </div>
+  <footer id="last-update">Última actualización: --</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script>
+    // Función para normalizar texto (quita tildes, espacios extra y lo pasa a mayúsculas)
+    function normalizar(texto) {
+      return texto
+        ? texto
+          .normalize("NFD")                  // separa acentos
+          .replace(/[\u0300-\u036f]/g, "")   // elimina acentos
+          .trim()
+          .toUpperCase()
+        : "";
+    }
+
+    async function cargar() {
+      const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-YNW3jMwhQTz7XVKWANadu5masT9S4IX2fym0vmVXAHgTVJEJtG30o-HvqgDOZw/pub?gid=1232827493&single=true&output=csv";
+
+      const resp = await fetch(url);
+      const text = await resp.text();
+
+      const data = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+
+      // Normalizamos todo el campo ÁREA antes de comparar
+      const areaBuscada = normalizar("PLANTA DE ACEITE");
+
+      const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
+
+      if (filtradas.length > 0) {
+        const columnas = Object.keys(filtradas[0]);
+
+        let tabla = "<table><thead><tr>";
+        columnas.forEach(col => { tabla += `<th>${col}</th>`; });
+        tabla += "</tr></thead><tbody>";
+
+        filtradas.forEach(row => {
+          tabla += "<tr>";
+          columnas.forEach(col => { tabla += `<td>${row[col] || ""}</td>`; });
+          tabla += "</tr>";
+        });
+
+        tabla += "</tbody></table>";
+        document.getElementById("tabla").innerHTML = tabla;
+      } else {
+        document.getElementById("tabla").textContent = "⚠ No hay datos para esta área (verifica el nombre en tu Excel).";
+      }
+
+      document.getElementById("last-update").textContent =
+        "Última actualización: " + new Date().toLocaleString();
+    }
+
+    cargar();
+  </script>
+</body>
+</html>
