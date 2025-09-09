@@ -46,7 +46,7 @@
       const data = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
 
       // Normalizamos todo el campo ÁREA antes de comparar
-      const areaBuscada = normalizar("PLANTE EVAPORADORA (PAC)");
+      const areaBuscada = normalizar("PLANTA EVAPORADORA (PAC)");
 
       const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
 
