@@ -24,49 +24,51 @@
   </div>
   <footer id="last-update">Última actualización: --</footer>
 
-  <!-- Papa Parse para manejar CSV correctamente -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
+    // Función para normalizar texto (quita tildes, espacios extra y lo pasa a mayúsculas)
+    function normalizar(texto) {
+      return texto
+        ? texto
+          .normalize("NFD")                  // separa acentos
+          .replace(/[\u0300-\u036f]/g, "")   // elimina acentos
+          .trim()
+          .toUpperCase()
+        : "";
+    }
+
     async function cargar() {
       const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-YNW3jMwhQTz7XVKWANadu5masT9S4IX2fym0vmVXAHgTVJEJtG30o-HvqgDOZw/pub?gid=1232827493&single=true&output=csv";
 
       const resp = await fetch(url);
       const text = await resp.text();
 
-      // Parsear CSV con encabezados
       const data = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
 
-      // Filtrar solo filas del área "RECEPCIÓN Y PESAJE"
-      const area = "RECEPCIÓN Y PESAJE";
-      const filtradas = data.filter(row => row["ÁREA"] && row["ÁREA"].trim().toUpperCase() === area);
+      // Normalizamos todo el campo ÁREA antes de comparar
+      const areaBuscada = normalizar("RECEPCIÓN Y PESAJE");
+
+      const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
 
       if (filtradas.length > 0) {
-        // Obtener todas las columnas dinámicamente
         const columnas = Object.keys(filtradas[0]);
 
-        // Construir tabla
         let tabla = "<table><thead><tr>";
-        columnas.forEach(col => {
-          tabla += `<th>${col}</th>`;
-        });
+        columnas.forEach(col => { tabla += `<th>${col}</th>`; });
         tabla += "</tr></thead><tbody>";
 
         filtradas.forEach(row => {
           tabla += "<tr>";
-          columnas.forEach(col => {
-            tabla += `<td>${row[col] || ""}</td>`;
-          });
+          columnas.forEach(col => { tabla += `<td>${row[col] || ""}</td>`; });
           tabla += "</tr>";
         });
 
         tabla += "</tbody></table>";
-
         document.getElementById("tabla").innerHTML = tabla;
       } else {
-        document.getElementById("tabla").textContent = "No hay datos para esta área.";
+        document.getElementById("tabla").textContent = "⚠ No hay datos para esta área (verifica el nombre en tu Excel).";
       }
 
-      // Actualización
       document.getElementById("last-update").textContent =
         "Última actualización: " + new Date().toLocaleString();
     }
