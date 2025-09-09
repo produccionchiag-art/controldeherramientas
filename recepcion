@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Recepción y Pesaje – Austral Group</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f7fa; margin:0; }
+    header { background:#004f71; color:#fff; padding:1em; text-align:center; }
+    .content { max-width:800px; margin:20px auto; background:#fff; padding:20px; border-radius:8px; }
+    h2 { color:#004f71; }
+    ul { padding-left:20px; }
+    footer { text-align:center; font-size:0.9em; color:#555; margin:20px; }
+  </style>
+</head>
+<body>
+  <header><h1>Recepción y Pesaje</h1></header>
+  <div class="content">
+    <h2>Herramientas</h2>
+    <div id="lista">Cargando...</div>
+  </div>
+  <footer id="last-update">Última actualización: --</footer>
+
+  <script>
+    async function cargar() {
+      const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-YNW3jMwhQTz7XVKWANadu5masT9S4IX2fym0vmVXAHgTVJEJtG30o-HvqgDOZw/pub?gid=1232827493&single=true&output=csv";
+      const resp = await fetch(url);
+      const text = await resp.text();
+      const filas = text.trim().split("\n");
+      const headers = filas.shift().split(",");
+      
+      const idxArea = headers.indexOf("ÁREA");
+      const idxHerr = headers.indexOf("HERRAMIENTAS Y MATERIALES");
+
+      const lista = filas
+        .map(f => f.split(","))
+        .filter(c => c[idxArea] === "RECEPCIÓN Y PESAJE")
+        .map(c => `<li>${c[idxHerr]}</li>`)
+        .join("");
+
+      document.getElementById("lista").innerHTML = `<ul>${lista}</ul>`;
+      document.getElementById("last-update").textContent =
+        "Última actualización: " + new Date().toLocaleString();
+    }
+    cargar();
+  </script>
+</body>
+</html>
