@@ -56,7 +56,7 @@
         // Crear listado de responsables únicos y mostrarlo primero
         const responsablesUnicos = new Map();
         filtradas.forEach(row => {
-          const responsable = row["RESPONSABLE"];
+          const responsable = row["RESPONSABLES"];
           const dni = row["DNI"];
           if (responsable && dni && !responsablesUnicos.has(responsable)) {
             responsablesUnicos.set(responsable, dni);
