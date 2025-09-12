@@ -46,7 +46,7 @@
       const text = await resp.text();
       const data = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
 
-      const areaBuscada = normalizar("COCCIÓN");
+      const areaBuscada = normalizar("COCCION");
       const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
 
       if (filtradas.length > 0) {
