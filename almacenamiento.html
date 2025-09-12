@@ -14,26 +14,27 @@
     tr:nth-child(even) { background:#f9f9f9; }
     tr:hover { background:#eef6f9; }
     footer { text-align:center; font-size:0.9em; color:#555; margin:20px; }
+    .responsables { margin-bottom:20px; padding:15px; background:#eef6f9; border-radius:6px; }
+    .responsables h3 { margin-top:0; color:#004f71; }
   </style>
 </head>
 <body>
   <header><h1>Almacenamiento</h1></header>
   <div class="content">
     <h2>Herramientas y Materiales</h2>
+
+    <!-- Lista de responsables ahora va arriba -->
+    <div class="responsables" id="responsables"></div>
+
     <div id="tabla">Cargando...</div>
   </div>
   <footer id="last-update">Última actualización: --</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
-    // Función para normalizar texto (quita tildes, espacios extra y lo pasa a mayúsculas)
     function normalizar(texto) {
       return texto
-        ? texto
-          .normalize("NFD")                  // separa acentos
-          .replace(/[\u0300-\u036f]/g, "")   // elimina acentos
-          .trim()
-          .toUpperCase()
+        ? texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase()
         : "";
     }
 
@@ -45,28 +46,51 @@
 
       const data = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
 
-      // Normalizamos todo el campo ÁREA antes de comparar
       const areaBuscada = normalizar("ALMACENAMIENTO");
-
       const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
 
       if (filtradas.length > 0) {
         const columnas = Object.keys(filtradas[0]);
+        const columnasTabla = columnas.filter(col => col !== "ÁREA" && col !== "RESPONSABLE" && col !== "DNI");
 
+        // Crear listado de responsables únicos y mostrarlo primero
+        const responsablesUnicos = new Map();
+        filtradas.forEach(row => {
+          const responsable = row["RESPONSABLE"];
+          const dni = row["DNI"];
+          if (responsable && dni && !responsablesUnicos.has(responsable)) {
+            responsablesUnicos.set(responsable, dni);
+          }
+        });
+
+        if (responsablesUnicos.size > 0) {
+          let lista = "<h3>Responsables del Área</h3><ul>";
+          responsablesUnicos.forEach((dni, nombre) => {
+            lista += `<li><strong>${nombre}</strong> – DNI: ${dni}</li>`;
+          });
+          lista += "</ul>";
+          document.getElementById("responsables").innerHTML = lista;
+        } else {
+          document.getElementById("responsables").innerHTML = "<h3>Responsables del Área</h3><p>No registrados.</p>";
+        }
+
+        // Construir tabla
         let tabla = "<table><thead><tr>";
-        columnas.forEach(col => { tabla += `<th>${col}</th>`; });
+        columnasTabla.forEach(col => { tabla += `<th>${col}</th>`; });
         tabla += "</tr></thead><tbody>";
 
         filtradas.forEach(row => {
           tabla += "<tr>";
-          columnas.forEach(col => { tabla += `<td>${row[col] || ""}</td>`; });
+          columnasTabla.forEach(col => { tabla += `<td>${row[col] || ""}</td>`; });
           tabla += "</tr>";
         });
 
         tabla += "</tbody></table>";
         document.getElementById("tabla").innerHTML = tabla;
+
       } else {
-        document.getElementById("tabla").textContent = "⚠ No hay datos para esta área (verifica el nombre en tu Excel).";
+        document.getElementById("responsables").innerHTML = "";
+        document.getElementById("tabla").textContent = "⚠ No hay datos para esta área.";
       }
 
       document.getElementById("last-update").textContent =
@@ -77,5 +101,6 @@
   </script>
 </body>
 </html>
+
 
 
