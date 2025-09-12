@@ -50,8 +50,20 @@
       const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
 
       if (filtradas.length > 0) {
-        // 1️⃣ MOSTRAR RESPONSABLES ARRIBA
-        const responsablesUnicos = [...new Set(filtradas.map(row => row["RESPONSABLES"]).filter(r => r))];
+        // 1️⃣ RESPONSABLES: separar por coma, punto y coma o salto de línea
+        let responsablesSeparados = [];
+        filtradas.forEach(row => {
+          if (row["RESPONSABLES"]) {
+            const partes = row["RESPONSABLES"]
+              .split(/[,;\n]+/) // separa por coma, punto y coma o salto de línea
+              .map(r => r.trim())
+              .filter(r => r.length > 0);
+            responsablesSeparados.push(...partes);
+          }
+        });
+
+        // Eliminar duplicados y ordenar alfabéticamente
+        const responsablesUnicos = [...new Set(responsablesSeparados)].sort();
 
         if (responsablesUnicos.length > 0) {
           let lista = "<h3>Responsables del Área</h3><ul>";
@@ -62,7 +74,7 @@
           document.getElementById("responsables").innerHTML = "<h3>Responsables del Área</h3><p>No registrados.</p>";
         }
 
-        // 2️⃣ MOSTRAR TABLA SIN "ÁREA" NI "RESPONSABLES"
+        // 2️⃣ TABLA SIN "ÁREA" NI "RESPONSABLES"
         const columnas = Object.keys(filtradas[0]);
         const columnasFiltradas = columnas.filter(col => col !== "ÁREA" && col !== "RESPONSABLES");
 
@@ -91,6 +103,7 @@
   </script>
 </body>
 </html>
+
 
 
 
