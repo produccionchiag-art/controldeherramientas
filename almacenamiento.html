@@ -16,16 +16,17 @@
     footer { text-align:center; font-size:0.9em; color:#555; margin:20px; }
     .responsables { margin-bottom:20px; padding:15px; background:#eef6f9; border-radius:6px; }
     .responsables h3 { margin-top:0; color:#004f71; }
+    .responsables ul { padding-left:20px; margin:0; }
+    .responsables li::before { content:"👤 "; }
   </style>
 </head>
 <body>
   <header><h1>Almacenamiento</h1></header>
   <div class="content">
+    <!-- RESPONSABLES arriba -->
+    <div class="responsables" id="responsables">Cargando responsables...</div>
+
     <h2>Herramientas y Materiales</h2>
-
-    <!-- Lista de responsables ahora va arriba -->
-    <div class="responsables" id="responsables"></div>
-
     <div id="tabla">Cargando...</div>
   </div>
   <footer id="last-update">Última actualización: --</footer>
@@ -43,51 +44,40 @@
 
       const resp = await fetch(url);
       const text = await resp.text();
-
       const data = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
 
       const areaBuscada = normalizar("ALMACENAMIENTO");
       const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
 
       if (filtradas.length > 0) {
-        const columnas = Object.keys(filtradas[0]);
-        const columnasTabla = columnas.filter(col => col !== "ÁREA" && col !== "RESPONSABLE" && col !== "DNI");
+        // 1️⃣ MOSTRAR RESPONSABLES ARRIBA
+        const responsablesUnicos = [...new Set(filtradas.map(row => row["RESPONSABLES"]).filter(r => r))];
 
-        // Crear listado de responsables únicos y mostrarlo primero
-        const responsablesUnicos = new Map();
-        filtradas.forEach(row => {
-          const responsable = row["RESPONSABLES"];
-          const dni = row["DNI"];
-          if (responsable && dni && !responsablesUnicos.has(responsable)) {
-            responsablesUnicos.set(responsable, dni);
-          }
-        });
-
-        if (responsablesUnicos.size > 0) {
+        if (responsablesUnicos.length > 0) {
           let lista = "<h3>Responsables del Área</h3><ul>";
-          responsablesUnicos.forEach((dni, nombre) => {
-            lista += `<li><strong>${nombre}</strong> – DNI: ${dni}</li>`;
-          });
+          responsablesUnicos.forEach(r => lista += `<li>${r}</li>`);
           lista += "</ul>";
           document.getElementById("responsables").innerHTML = lista;
         } else {
           document.getElementById("responsables").innerHTML = "<h3>Responsables del Área</h3><p>No registrados.</p>";
         }
 
-        // Construir tabla
+        // 2️⃣ MOSTRAR TABLA SIN "ÁREA" NI "RESPONSABLES"
+        const columnas = Object.keys(filtradas[0]);
+        const columnasFiltradas = columnas.filter(col => col !== "ÁREA" && col !== "RESPONSABLES");
+
         let tabla = "<table><thead><tr>";
-        columnasTabla.forEach(col => { tabla += `<th>${col}</th>`; });
+        columnasFiltradas.forEach(col => { tabla += `<th>${col}</th>`; });
         tabla += "</tr></thead><tbody>";
 
         filtradas.forEach(row => {
           tabla += "<tr>";
-          columnasTabla.forEach(col => { tabla += `<td>${row[col] || ""}</td>`; });
+          columnasFiltradas.forEach(col => { tabla += `<td>${row[col] || ""}</td>`; });
           tabla += "</tr>";
         });
 
         tabla += "</tbody></table>";
         document.getElementById("tabla").innerHTML = tabla;
-
       } else {
         document.getElementById("responsables").innerHTML = "";
         document.getElementById("tabla").textContent = "⚠ No hay datos para esta área.";
