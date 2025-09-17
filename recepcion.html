@@ -9,10 +9,11 @@
     .content { max-width:95%; margin:20px auto; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
     h2 { color:#004f71; margin-top:0; }
     table { width:100%; border-collapse:collapse; margin-top:15px; }
-    th, td { border:1px solid #ddd; padding:8px; text-align:left; }
+    th, td { border:1px solid #ddd; padding:8px; text-align:left; vertical-align:middle; }
     th { background:#007fa3; color:white; }
     tr:nth-child(even) { background:#f9f9f9; }
     tr:hover { background:#eef6f9; }
+    td img { max-width:80px; max-height:80px; border-radius:4px; display:block; margin:auto; }
     footer { text-align:center; font-size:0.9em; color:#555; margin:20px; }
     .responsables { margin-bottom:20px; padding:15px; background:#eef6f9; border-radius:6px; }
     .responsables h3 { margin-top:0; color:#004f71; }
@@ -23,10 +24,9 @@
 <body>
   <header><h1>Recepción y Pesaje</h1></header>
   <div class="content">
-    <!-- RESPONSABLES arriba -->
     <div class="responsables" id="responsables">Cargando responsables...</div>
 
-    <h2>Gestión de Herramientas</h2>
+    <h2>Herramientas y Materiales</h2>
     <div id="tabla">Cargando...</div>
   </div>
   <footer id="last-update">Última actualización: --</footer>
@@ -50,19 +50,17 @@
       const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
 
       if (filtradas.length > 0) {
-        // 1️⃣ RESPONSABLES: separar por coma, punto y coma o salto de línea
+        // RESPONSABLES
         let responsablesSeparados = [];
         filtradas.forEach(row => {
           if (row["RESPONSABLES"]) {
             const partes = row["RESPONSABLES"]
-              .split(/[,;\n]+/) // separa por coma, punto y coma o salto de línea
+              .split(/[,;\n]+/)
               .map(r => r.trim())
               .filter(r => r.length > 0);
             responsablesSeparados.push(...partes);
           }
         });
-
-        // Eliminar duplicados y ordenar alfabéticamente
         const responsablesUnicos = [...new Set(responsablesSeparados)].sort();
 
         if (responsablesUnicos.length > 0) {
@@ -74,7 +72,7 @@
           document.getElementById("responsables").innerHTML = "<h3>Responsables del Área</h3><p>No registrados.</p>";
         }
 
-        // 2️⃣ TABLA SIN "ÁREA" NI "RESPONSABLES"
+        // TABLA
         const columnas = Object.keys(filtradas[0]);
         const columnasFiltradas = columnas.filter(col => col !== "ÁREA" && col !== "RESPONSABLES");
 
@@ -84,7 +82,15 @@
 
         filtradas.forEach(row => {
           tabla += "<tr>";
-          columnasFiltradas.forEach(col => { tabla += `<td>${row[col] || ""}</td>`; });
+          columnasFiltradas.forEach(col => {
+            if (col.toUpperCase().includes("IMAGEN")) {
+              // Si es columna de imagen, mostrar <img>
+              const urlImg = row[col];
+              tabla += `<td>${urlImg ? `<img src="${urlImg}" alt="Imagen de material">` : ""}</td>`;
+            } else {
+              tabla += `<td>${row[col] || ""}</td>`;
+            }
+          });
           tabla += "</tr>";
         });
 
