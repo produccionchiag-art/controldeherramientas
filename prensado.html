@@ -1,37 +1,86 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <title>Prensado – Austral Group</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f5f7fa; margin:0; }
-    header { background:#004f71; color:#fff; padding:1em; text-align:center; }
+    :root {
+      --color-principal: #043366;
+      --color-secundario: #0a4b99;
+      --color-fondo: #f5f7fa;
+    }
+
+    body { font-family: Arial, sans-serif; background: var(--color-fondo); margin:0; }
+    header { background: var(--color-principal); color:#fff; padding:1em; text-align:center; }
     .content { max-width:95%; margin:20px auto; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-    h2 { color:#004f71; margin-top:0; }
+    h2 { color: var(--color-principal); margin-top:0; }
     table { width:100%; border-collapse:collapse; margin-top:15px; }
     th, td { border:1px solid #ddd; padding:8px; text-align:left; }
-    th { background:#007fa3; color:white; }
-    tr:nth-child(even) { background:#f9f9f9; }
-    tr:hover { background:#eef6f9; }
+    th { background: var(--color-principal); color:white; }
+    tr:nth-child(even) { background:#f0f4f8; }
+    tr:hover { background:#e6ecf5; }
     footer { text-align:center; font-size:0.9em; color:#555; margin:20px; }
-    .responsables { margin-bottom:20px; padding:15px; background:#eef6f9; border-radius:6px; }
-    .responsables h3 { margin-top:0; color:#004f71; }
+    .responsables { margin-bottom:20px; padding:15px; background:#e6ecf5; border-radius:6px; }
+    .responsables h3 { margin-top:0; color: var(--color-principal); }
     .responsables ul { padding-left:20px; margin:0; }
     .responsables li::before { content:"👤 "; }
+    .export-buttons { display:flex; gap:10px; margin:10px 0; }
+    .export-buttons button {
+      background: var(--color-principal); 
+      color:white; 
+      border:none; 
+      padding:8px 12px;
+      border-radius:6px; 
+      cursor:pointer; 
+      font-size:0.9em;
+      transition: background 0.2s ease-in-out;
+    }
+    .export-buttons button:hover { background: var(--color-secundario); }
+    .titulo-pdf {
+      text-align:center;
+      font-weight:bold;
+      font-size:1.6em;
+      color: var(--color-principal);
+      margin-bottom:10px;
+      padding-bottom:5px;
+      border-bottom:2px solid var(--color-principal);
+    }
+
+    /* 📄 Evitar que las filas se corten en el PDF */
+    table, tr, td, th {
+      page-break-inside: avoid !important;
+    }
+
+    /* Espacio entre páginas en el PDF */
+    .content {
+      page-break-inside: auto;
+    }
   </style>
 </head>
 <body>
-  <header><h1>Prensado</h1></header>
-  <div class="content">
-    <!-- RESPONSABLES arriba -->
+  <header><h1 id="titulo-area">Prensado</h1></header>
+  <div class="content" id="content">
+    <!-- RESPONSABLES -->
     <div class="responsables" id="responsables">Cargando responsables...</div>
 
     <h2>Gestión de Herramientas</h2>
+
+    <!-- BOTONES DE EXPORTACIÓN -->
+    <div class="export-buttons" id="botones">
+      <button onclick="exportarPDF()">📄 Exportar PDF</button>
+      <button onclick="exportarExcel()">📊 Exportar Excel</button>
+    </div>
+
+    <!-- TABLA -->
     <div id="tabla">Cargando...</div>
   </div>
   <footer id="last-update">Última actualización: --</footer>
 
+  <!-- Librerías necesarias -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
   <script>
     function normalizar(texto) {
       return texto
@@ -41,7 +90,6 @@
 
     async function cargar() {
       const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-YNW3jMwhQTz7XVKWANadu5masT9S4IX2fym0vmVXAHgTVJEJtG30o-HvqgDOZw/pub?gid=1232827493&single=true&output=csv";
-
       const resp = await fetch(url);
       const text = await resp.text();
       const data = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
@@ -50,21 +98,19 @@
       const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
 
       if (filtradas.length > 0) {
-        // 1️⃣ RESPONSABLES: separar por coma, punto y coma o salto de línea
+        // RESPONSABLES
         let responsablesSeparados = [];
         filtradas.forEach(row => {
           if (row["RESPONSABLES"]) {
             const partes = row["RESPONSABLES"]
-              .split(/[,;\n]+/) // separa por coma, punto y coma o salto de línea
+              .split(/[,;\n]+/)
               .map(r => r.trim())
               .filter(r => r.length > 0);
             responsablesSeparados.push(...partes);
           }
         });
 
-        // Eliminar duplicados y ordenar alfabéticamente
         const responsablesUnicos = [...new Set(responsablesSeparados)].sort();
-
         if (responsablesUnicos.length > 0) {
           let lista = "<h3>Responsables del Área</h3><ul>";
           responsablesUnicos.forEach(r => lista += `<li>${r}</li>`);
@@ -74,11 +120,11 @@
           document.getElementById("responsables").innerHTML = "<h3>Responsables del Área</h3><p>No registrados.</p>";
         }
 
-        // 2️⃣ TABLA SIN "ÁREA" NI "RESPONSABLES"
+        // TABLA
         const columnas = Object.keys(filtradas[0]);
         const columnasFiltradas = columnas.filter(col => col !== "ÁREA" && col !== "RESPONSABLES");
 
-        let tabla = "<table><thead><tr>";
+        let tabla = "<table id='tabla-datos'><thead><tr>";
         columnasFiltradas.forEach(col => { tabla += `<th>${col}</th>`; });
         tabla += "</tr></thead><tbody>";
 
@@ -97,6 +143,41 @@
 
       document.getElementById("last-update").textContent =
         "Última actualización: " + new Date().toLocaleString();
+    }
+
+    function exportarPDF() {
+      const botones = document.getElementById('botones');
+      botones.style.display = "none"; 
+
+      const content = document.getElementById('content');
+      const area = document.getElementById('titulo-area').textContent;
+      const tituloExtra = document.createElement("div");
+      tituloExtra.className = "titulo-pdf";
+      tituloExtra.textContent = area;
+      content.insertBefore(tituloExtra, content.firstChild);
+
+      const nombreArchivo = area.toLowerCase().replace(/\s+/g, "_") + ".pdf";
+      const opt = {
+        margin: 0.4,
+        filename: nombreArchivo,
+        image: { type: 'jpeg', quality: 1 },
+        html2canvas: { scale: 3, useCORS: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all','css','legacy'] } // 🔑 Evita cortes en filas
+      };
+
+      html2pdf().set(opt).from(content).save().then(() => {
+        tituloExtra.remove();
+        botones.style.display = "flex"; 
+      });
+    }
+
+    function exportarExcel() {
+      const tabla = document.getElementById('tabla-datos');
+      const wb = XLSX.utils.table_to_book(tabla, { sheet: "Datos" });
+      const area = document.getElementById('titulo-area').textContent;
+      const nombreArchivo = area.toLowerCase().replace(/\s+/g, "_") + ".xlsx";
+      XLSX.writeFile(wb, nombreArchivo);
     }
 
     cargar();
