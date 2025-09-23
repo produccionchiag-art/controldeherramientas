@@ -27,7 +27,7 @@
   </style>
 </head>
 <body>
-  <header><h1>Recepción y Pesaje</h1></header>
+  <header><h1 id="titulo-area">Recepción y Pesaje</h1></header>
   <div class="content" id="content">
     <!-- RESPONSABLES -->
     <div class="responsables" id="responsables">Cargando responsables...</div>
@@ -35,7 +35,7 @@
     <h2>Gestión de Herramientas</h2>
 
     <!-- BOTONES DE EXPORTACIÓN -->
-    <div class="export-buttons">
+    <div class="export-buttons" id="botones">
       <button onclick="exportarPDF()">📄 Exportar PDF</button>
       <button onclick="exportarExcel()">📊 Exportar Excel</button>
     </div>
@@ -114,20 +114,29 @@
         "Última actualización: " + new Date().toLocaleString();
     }
 
-    // 🔽 Función Exportar a PDF
+    // 📄 Exportar a PDF SIN botones visibles en el PDF
     function exportarPDF() {
+      const botones = document.getElementById('botones');
+      botones.style.display = "none"; // 👀 Oculta los botones en la vista
+
+      const area = document.getElementById('titulo-area').textContent;
+      const nombreArchivo = area.toLowerCase().replace(/\s+/g, "_") + ".pdf";
+
       const element = document.getElementById('content');
       const opt = {
-        margin: 0.5,
-        filename: 'recepcion_y_pesaje.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
+        margin: 0.4,
+        filename: nombreArchivo,
+        image: { type: 'jpeg', quality: 1 },
+        html2canvas: { scale: 3, useCORS: true },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
-      html2pdf().set(opt).from(element).save();
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        botones.style.display = "flex"; // ✅ Los vuelve a mostrar
+      });
     }
 
-    // 🔽 Función Exportar a Excel
+    // 📊 Exportar a Excel
     function exportarExcel() {
       const tabla = document.getElementById('tabla-datos');
       const wb = XLSX.utils.table_to_book(tabla, { sheet: "Datos" });
