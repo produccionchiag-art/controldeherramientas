@@ -47,6 +47,21 @@
       cursor: pointer;
     }
     #botones button:hover { background: #0555aa; }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: rgba(4,51,102,0.95);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 6px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+      display: none;
+      z-index: 9999;
+      font-size: 0.95rem;
+    }
   </style>
 </head>
 <body>
@@ -65,79 +80,109 @@
   </div>
   <footer id="last-update">Última actualización: --</footer>
 
+  <div id="toast" role="status" aria-live="polite"></div>
+
   <!-- Librerías -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <script>
+    // Datos actuales mostrados (para exportar)
+    window.currentTableData = null;
+    window.currentColumns = null;
+
     function normalizar(texto) {
       return texto
         ? texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase()
         : "";
     }
 
+    function showToast(msg, time = 3000) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      clearTimeout(t._timeout);
+      t._timeout = setTimeout(() => { t.style.display = 'none'; }, time);
+    }
+
     async function cargar() {
-      const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-YNW3jMwhQTz7XVKWANadu5masT9S4IX2fym0vmVXAHgTVJEJtG30o-HvqgDOZw/pub?gid=1232827493&single=true&output=csv";
-      const resp = await fetch(url);
-      const text = await resp.text();
-      const data = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+      try {
+        const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-YNW3jMwhQTz7XVKWANadu5masT9S4IX2fym0vmVXAHgTVJEJtG30o-HvqgDOZw/pub?gid=1232827493&single=true&output=csv";
+        const resp = await fetch(url);
+        const text = await resp.text();
+        const data = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
 
-      const areaBuscada = normalizar("ALMACENAMIENTO");
-      const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
+        const areaBuscada = normalizar("ALMACENAMIENTO");
+        const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
 
-      if (filtradas.length > 0) {
-        // RESPONSABLES
-        let responsablesSeparados = [];
-        filtradas.forEach(row => {
-          if (row["RESPONSABLES"]) {
-            const partes = row["RESPONSABLES"]
-              .split(/[,;\n]+/)
-              .map(r => r.trim())
-              .filter(r => r.length > 0);
-            responsablesSeparados.push(...partes);
+        if (filtradas.length > 0) {
+          // RESPONSABLES (separar por , ; o salto de línea)
+          let responsablesSeparados = [];
+          filtradas.forEach(row => {
+            if (row["RESPONSABLES"]) {
+              const partes = row["RESPONSABLES"]
+                .split(/[,;\n]+/)
+                .map(r => r.trim())
+                .filter(r => r.length > 0);
+              responsablesSeparados.push(...partes);
+            }
+          });
+
+          const responsablesUnicos = [...new Set(responsablesSeparados)].sort();
+          if (responsablesUnicos.length > 0) {
+            let lista = "<h3>Responsables del Área</h3><ul>";
+            responsablesUnicos.forEach(r => lista += `<li>${r}</li>`);
+            lista += "</ul>";
+            document.getElementById("responsables").innerHTML = lista;
+          } else {
+            document.getElementById("responsables").innerHTML = "<h3>Responsables del Área</h3><p>No registrados.</p>";
           }
-        });
 
-        const responsablesUnicos = [...new Set(responsablesSeparados)].sort();
-        if (responsablesUnicos.length > 0) {
-          let lista = "<h3>Responsables del Área</h3><ul>";
-          responsablesUnicos.forEach(r => lista += `<li>${r}</li>`);
-          lista += "</ul>";
-          document.getElementById("responsables").innerHTML = lista;
+          // TABLA SIN "ÁREA" NI "RESPONSABLES"
+          const columnas = Object.keys(filtradas[0] || {});
+          const columnasFiltradas = columnas.filter(col => col !== "ÁREA" && col !== "RESPONSABLES");
+
+          // Guardamos columnas y datos para exportar Excel
+          window.currentColumns = columnasFiltradas.slice(); // copia
+          window.currentTableData = filtradas.map(row => {
+            const obj = {};
+            columnasFiltradas.forEach(col => { obj[col] = row[col] || ""; });
+            return obj;
+          });
+
+          // Construir tabla DOM (id tabla-datos)
+          let tabla = "<table id='tabla-datos'><thead><tr>";
+          columnasFiltradas.forEach(col => { tabla += `<th>${col}</th>`; });
+          tabla += "</tr></thead><tbody>";
+
+          filtradas.forEach(row => {
+            tabla += "<tr>";
+            columnasFiltradas.forEach(col => { tabla += `<td>${row[col] || ""}</td>`; });
+            tabla += "</tr>";
+          });
+
+          tabla += "</tbody></table>";
+          document.getElementById("tabla").innerHTML = tabla;
         } else {
-          document.getElementById("responsables").innerHTML = "<h3>Responsables del Área</h3><p>No registrados.</p>";
+          document.getElementById("responsables").innerHTML = "";
+          document.getElementById("tabla").textContent = "⚠ No hay datos para esta área.";
+          // reset global data
+          window.currentColumns = null;
+          window.currentTableData = null;
         }
 
-        // TABLA SIN "ÁREA" NI "RESPONSABLES"
-        const columnas = Object.keys(filtradas[0]);
-        const columnasFiltradas = columnas.filter(col => col !== "ÁREA" && col !== "RESPONSABLES");
-
-        // <-- Aquí asignamos id="tabla-datos" para que exportarExcel lo encuentre -->
-        let tabla = "<table id='tabla-datos'><thead><tr>";
-        columnasFiltradas.forEach(col => { tabla += `<th>${col}</th>`; });
-        tabla += "</tr></thead><tbody>";
-
-        filtradas.forEach(row => {
-          tabla += "<tr>";
-          columnasFiltradas.forEach(col => { tabla += `<td>${row[col] || ""}</td>`; });
-          tabla += "</tr>";
-        });
-
-        tabla += "</tbody></table>";
-        document.getElementById("tabla").innerHTML = tabla;
-      } else {
-        document.getElementById("responsables").innerHTML = "";
-        document.getElementById("tabla").textContent = "⚠ No hay datos para esta área.";
+        document.getElementById("last-update").textContent =
+          "Última actualización: " + new Date().toLocaleString();
+      } catch (err) {
+        console.error(err);
+        alert('Error cargando datos: ' + (err.message || err));
       }
-
-      document.getElementById("last-update").textContent =
-        "Última actualización: " + new Date().toLocaleString();
     }
 
     function exportarPDF() {
       const botones = document.getElementById('botones');
-      botones.style.display = "none"; 
+      botones.style.display = "none";
 
       const content = document.getElementById('content');
       const area = document.getElementById('titulo-area').textContent;
@@ -159,32 +204,50 @@
       html2pdf().set(opt).from(content).save().then(() => {
         tituloExtra.remove();
         botones.style.display = "flex";
+        showToast('Descarga PDF completada');
+      }).catch(err => {
+        tituloExtra.remove();
+        botones.style.display = "flex";
+        console.error(err);
+        alert('Error al generar PDF: ' + (err.message || err));
       });
     }
 
     function exportarExcel() {
       try {
-        // busco por id primero (recomendado)
-        let tabla = document.getElementById('tabla-datos');
-        // fallback: si no existe, tomo la primera tabla dentro del contenedor #tabla
-        if (!tabla) tabla = document.querySelector('#tabla table');
+        const area = (document.getElementById('titulo-area').textContent || 'export').toLowerCase().replace(/\s+/g, "_");
+        const nombreArchivo = area + ".xlsx";
 
+        // Preferir datos guardados (más confiable)
+        if (window.currentTableData && window.currentTableData.length && window.currentColumns && window.currentColumns.length) {
+          const ws = XLSX.utils.json_to_sheet(window.currentTableData, { header: window.currentColumns });
+          // ajustar ancho de columnas (opcional, básico)
+          const colWidths = window.currentColumns.map(c => ({ wch: Math.max(10, Math.min(30, c.length + 5)) }));
+          ws['!cols'] = colWidths;
+
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+          XLSX.writeFile(wb, nombreArchivo);
+          showToast('Descarga Excel iniciada: ' + nombreArchivo);
+          return;
+        }
+
+        // Fallback a tabla DOM
+        let tabla = document.getElementById('tabla-datos') || document.querySelector('#tabla table');
         if (!tabla) {
           alert('No hay tabla para exportar.');
           return;
         }
-
-        // convertir tabla DOM a workbook
         const wb = XLSX.utils.table_to_book(tabla, { sheet: "Datos" });
-        const area = document.getElementById('titulo-area').textContent || 'export';
-        const nombreArchivo = area.toLowerCase().replace(/\s+/g, "_") + ".xlsx";
         XLSX.writeFile(wb, nombreArchivo);
+        showToast('Descarga Excel iniciada: ' + nombreArchivo);
       } catch (err) {
         console.error(err);
         alert('Error al exportar a Excel: ' + (err.message || err));
       }
     }
 
+    // ejecutar carga inicial
     cargar();
   </script>
 </body>
