@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -44,6 +44,16 @@
       margin-bottom:10px;
       padding-bottom:5px;
       border-bottom:2px solid var(--color-principal);
+    }
+
+    /* 📄 Evitar que las filas se corten en el PDF */
+    table, tr, td, th {
+      page-break-inside: avoid !important;
+    }
+
+    /* Espacio entre páginas en el PDF */
+    .content {
+      page-break-inside: auto;
     }
   </style>
 </head>
@@ -152,7 +162,8 @@
         filename: nombreArchivo,
         image: { type: 'jpeg', quality: 1 },
         html2canvas: { scale: 3, useCORS: true },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all','css','legacy'] } // 🔑 Evita cortes en filas
       };
 
       html2pdf().set(opt).from(content).save().then(() => {
