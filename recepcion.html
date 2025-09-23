@@ -18,20 +18,38 @@
     .responsables h3 { margin-top:0; color:#004f71; }
     .responsables ul { padding-left:20px; margin:0; }
     .responsables li::before { content:"👤 "; }
+    .export-buttons { display:flex; gap:10px; margin:10px 0; }
+    .export-buttons button {
+      background:#007fa3; color:white; border:none; padding:8px 12px;
+      border-radius:6px; cursor:pointer; font-size:0.9em;
+    }
+    .export-buttons button:hover { background:#005f75; }
   </style>
 </head>
 <body>
   <header><h1>Recepción y Pesaje</h1></header>
-  <div class="content">
-    <!-- RESPONSABLES arriba -->
+  <div class="content" id="content">
+    <!-- RESPONSABLES -->
     <div class="responsables" id="responsables">Cargando responsables...</div>
 
     <h2>Gestión de Herramientas</h2>
+
+    <!-- BOTONES DE EXPORTACIÓN -->
+    <div class="export-buttons">
+      <button onclick="exportarPDF()">📄 Exportar PDF</button>
+      <button onclick="exportarExcel()">📊 Exportar Excel</button>
+    </div>
+
+    <!-- TABLA -->
     <div id="tabla">Cargando...</div>
   </div>
   <footer id="last-update">Última actualización: --</footer>
 
+  <!-- Librerías necesarias -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
   <script>
     function normalizar(texto) {
       return texto
@@ -41,7 +59,6 @@
 
     async function cargar() {
       const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-YNW3jMwhQTz7XVKWANadu5masT9S4IX2fym0vmVXAHgTVJEJtG30o-HvqgDOZw/pub?gid=1232827493&single=true&output=csv";
-
       const resp = await fetch(url);
       const text = await resp.text();
       const data = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
@@ -50,21 +67,19 @@
       const filtradas = data.filter(row => normalizar(row["ÁREA"]) === areaBuscada);
 
       if (filtradas.length > 0) {
-        // 1️⃣ RESPONSABLES: separar por coma, punto y coma o salto de línea
+        // RESPONSABLES
         let responsablesSeparados = [];
         filtradas.forEach(row => {
           if (row["RESPONSABLES"]) {
             const partes = row["RESPONSABLES"]
-              .split(/[,;\n]+/) // separa por coma, punto y coma o salto de línea
+              .split(/[,;\n]+/)
               .map(r => r.trim())
               .filter(r => r.length > 0);
             responsablesSeparados.push(...partes);
           }
         });
 
-        // Eliminar duplicados y ordenar alfabéticamente
         const responsablesUnicos = [...new Set(responsablesSeparados)].sort();
-
         if (responsablesUnicos.length > 0) {
           let lista = "<h3>Responsables del Área</h3><ul>";
           responsablesUnicos.forEach(r => lista += `<li>${r}</li>`);
@@ -74,11 +89,11 @@
           document.getElementById("responsables").innerHTML = "<h3>Responsables del Área</h3><p>No registrados.</p>";
         }
 
-        // 2️⃣ TABLA SIN "ÁREA" NI "RESPONSABLES"
+        // TABLA
         const columnas = Object.keys(filtradas[0]);
         const columnasFiltradas = columnas.filter(col => col !== "ÁREA" && col !== "RESPONSABLES");
 
-        let tabla = "<table><thead><tr>";
+        let tabla = "<table id='tabla-datos'><thead><tr>";
         columnasFiltradas.forEach(col => { tabla += `<th>${col}</th>`; });
         tabla += "</tr></thead><tbody>";
 
@@ -99,10 +114,27 @@
         "Última actualización: " + new Date().toLocaleString();
     }
 
+    // 🔽 Función Exportar a PDF
+    function exportarPDF() {
+      const element = document.getElementById('content');
+      const opt = {
+        margin: 0.5,
+        filename: 'recepcion_y_pesaje.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    // 🔽 Función Exportar a Excel
+    function exportarExcel() {
+      const tabla = document.getElementById('tabla-datos');
+      const wb = XLSX.utils.table_to_book(tabla, { sheet: "Datos" });
+      XLSX.writeFile(wb, "recepcion_y_pesaje.xlsx");
+    }
+
     cargar();
   </script>
 </body>
 </html>
-
-
-
