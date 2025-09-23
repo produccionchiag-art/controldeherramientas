@@ -4,69 +4,71 @@
   <meta charset="UTF-8">
   <title>Almacenamiento – Austral Group</title>
   <style>
-    :root {
-      --color-principal: #043366;
-      --color-secundario: #0a4b99;
-      --color-fondo: #f5f7fa;
-    }
-
-    body { font-family: Arial, sans-serif; background: var(--color-fondo); margin:0; }
-    header { background: var(--color-principal); color:#fff; padding:1em; text-align:center; }
+    body { font-family: Arial, sans-serif; background: #f5f7fa; margin:0; }
+    header { background:#043366; color:#fff; padding:1em; text-align:center; }
     .content { max-width:95%; margin:20px auto; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-    h2 { color: var(--color-principal); margin-top:0; }
+    h2 { color:#043366; margin-top:0; }
     table { width:100%; border-collapse:collapse; margin-top:15px; }
     th, td { border:1px solid #ddd; padding:8px; text-align:left; }
-    th { background: var(--color-principal); color:white; }
-    tr:nth-child(even) { background:#f0f4f8; }
-    tr:hover { background:#e6ecf5; }
+    th { background:#043366; color:white; }
+    tr:nth-child(even) { background:#f9f9f9; }
+    tr:hover { background:#eef6f9; }
     footer { text-align:center; font-size:0.9em; color:#555; margin:20px; }
-    .responsables { margin-bottom:20px; padding:15px; background:#e6ecf5; border-radius:6px; }
-    .responsables h3 { margin-top:0; color: var(--color-principal); }
+    .responsables { margin-bottom:20px; padding:15px; background:#eef6f9; border-radius:6px; }
+    .responsables h3 { margin-top:0; color:#043366; }
     .responsables ul { padding-left:20px; margin:0; }
     .responsables li::before { content:"👤 "; }
-    .export-buttons { display:flex; gap:10px; margin:10px 0; }
-    .export-buttons button {
-      background: var(--color-principal); 
-      color:white; 
-      border:none; 
-      padding:8px 12px;
-      border-radius:6px; 
-      cursor:pointer; 
-      font-size:0.9em;
-      transition: background 0.2s ease-in-out;
+
+    /* Evitar cortes de fila en PDF */
+    table, tr, td, th {
+      page-break-inside: avoid !important;
     }
-    .export-buttons button:hover { background: var(--color-secundario); }
+
+    /* Título extra que solo se verá en el PDF */
     .titulo-pdf {
-      text-align:center;
-      font-weight:bold;
-      font-size:1.6em;
-      color: var(--color-principal);
-      margin-bottom:10px;
-      padding-bottom:5px;
-      border-bottom:2px solid var(--color-principal);
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+      color: #043366;
+    }
+
+    /* Botones de exportación */
+    #botones {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    #botones button {
+      background: #043366;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #botones button:hover {
+      background: #0555aa;
     }
   </style>
 </head>
 <body>
   <header><h1 id="titulo-area">Almacenamiento</h1></header>
   <div class="content" id="content">
-    <!-- RESPONSABLES -->
-    <div class="responsables" id="responsables">Cargando responsables...</div>
-
-    <h2>Gestión de Herramientas</h2>
-
-    <!-- BOTONES DE EXPORTACIÓN -->
-    <div class="export-buttons" id="botones">
+    <div id="botones">
       <button onclick="exportarPDF()">📄 Exportar PDF</button>
       <button onclick="exportarExcel()">📊 Exportar Excel</button>
     </div>
 
-    <!-- TABLA -->
+    <!-- RESPONSABLES arriba -->
+    <div class="responsables" id="responsables">Cargando responsables...</div>
+
+    <h2>Gestión de Herramientas</h2>
     <div id="tabla">Cargando...</div>
   </div>
   <footer id="last-update">Última actualización: --</footer>
 
-  <!-- Librerías necesarias -->
+  <!-- Librerías -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -110,11 +112,11 @@
           document.getElementById("responsables").innerHTML = "<h3>Responsables del Área</h3><p>No registrados.</p>";
         }
 
-        // TABLA
+        // TABLA SIN "ÁREA" NI "RESPONSABLES"
         const columnas = Object.keys(filtradas[0]);
         const columnasFiltradas = columnas.filter(col => col !== "ÁREA" && col !== "RESPONSABLES");
 
-        let tabla = "<table id='tabla-datos'><thead><tr>";
+        let tabla = "<table><thead><tr>";
         columnasFiltradas.forEach(col => { tabla += `<th>${col}</th>`; });
         tabla += "</tr></thead><tbody>";
 
@@ -152,12 +154,13 @@
         filename: nombreArchivo,
         image: { type: 'jpeg', quality: 1 },
         html2canvas: { scale: 3, useCORS: true },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
 
       html2pdf().set(opt).from(content).save().then(() => {
         tituloExtra.remove();
-        botones.style.display = "flex"; 
+        botones.style.display = "flex";
       });
     }
 
