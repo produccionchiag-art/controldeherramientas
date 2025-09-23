@@ -24,7 +24,6 @@
       page-break-inside: avoid !important;
     }
 
-    /* Título extra que solo se verá en el PDF */
     .titulo-pdf {
       font-size: 20px;
       font-weight: bold;
@@ -47,9 +46,7 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    #botones button:hover {
-      background: #0555aa;
-    }
+    #botones button:hover { background: #0555aa; }
   </style>
 </head>
 <body>
@@ -116,7 +113,8 @@
         const columnas = Object.keys(filtradas[0]);
         const columnasFiltradas = columnas.filter(col => col !== "ÁREA" && col !== "RESPONSABLES");
 
-        let tabla = "<table><thead><tr>";
+        // <-- Aquí asignamos id="tabla-datos" para que exportarExcel lo encuentre -->
+        let tabla = "<table id='tabla-datos'><thead><tr>";
         columnasFiltradas.forEach(col => { tabla += `<th>${col}</th>`; });
         tabla += "</tr></thead><tbody>";
 
@@ -165,11 +163,26 @@
     }
 
     function exportarExcel() {
-      const tabla = document.getElementById('tabla-datos');
-      const wb = XLSX.utils.table_to_book(tabla, { sheet: "Datos" });
-      const area = document.getElementById('titulo-area').textContent;
-      const nombreArchivo = area.toLowerCase().replace(/\s+/g, "_") + ".xlsx";
-      XLSX.writeFile(wb, nombreArchivo);
+      try {
+        // busco por id primero (recomendado)
+        let tabla = document.getElementById('tabla-datos');
+        // fallback: si no existe, tomo la primera tabla dentro del contenedor #tabla
+        if (!tabla) tabla = document.querySelector('#tabla table');
+
+        if (!tabla) {
+          alert('No hay tabla para exportar.');
+          return;
+        }
+
+        // convertir tabla DOM a workbook
+        const wb = XLSX.utils.table_to_book(tabla, { sheet: "Datos" });
+        const area = document.getElementById('titulo-area').textContent || 'export';
+        const nombreArchivo = area.toLowerCase().replace(/\s+/g, "_") + ".xlsx";
+        XLSX.writeFile(wb, nombreArchivo);
+      } catch (err) {
+        console.error(err);
+        alert('Error al exportar a Excel: ' + (err.message || err));
+      }
     }
 
     cargar();
