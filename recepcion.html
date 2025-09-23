@@ -4,26 +4,47 @@
   <meta charset="UTF-8">
   <title>Recepción y Pesaje – Austral Group</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f5f7fa; margin:0; }
-    header { background:#004f71; color:#fff; padding:1em; text-align:center; }
+    :root {
+      --color-principal: #043366;
+      --color-secundario: #0a4b99;
+      --color-fondo: #f5f7fa;
+    }
+
+    body { font-family: Arial, sans-serif; background: var(--color-fondo); margin:0; }
+    header { background: var(--color-principal); color:#fff; padding:1em; text-align:center; }
     .content { max-width:95%; margin:20px auto; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-    h2 { color:#004f71; margin-top:0; }
+    h2 { color: var(--color-principal); margin-top:0; }
     table { width:100%; border-collapse:collapse; margin-top:15px; }
     th, td { border:1px solid #ddd; padding:8px; text-align:left; }
-    th { background:#007fa3; color:white; }
-    tr:nth-child(even) { background:#f9f9f9; }
-    tr:hover { background:#eef6f9; }
+    th { background: var(--color-principal); color:white; }
+    tr:nth-child(even) { background:#f0f4f8; }
+    tr:hover { background:#e6ecf5; }
     footer { text-align:center; font-size:0.9em; color:#555; margin:20px; }
-    .responsables { margin-bottom:20px; padding:15px; background:#eef6f9; border-radius:6px; }
-    .responsables h3 { margin-top:0; color:#004f71; }
+    .responsables { margin-bottom:20px; padding:15px; background:#e6ecf5; border-radius:6px; }
+    .responsables h3 { margin-top:0; color: var(--color-principal); }
     .responsables ul { padding-left:20px; margin:0; }
     .responsables li::before { content:"👤 "; }
     .export-buttons { display:flex; gap:10px; margin:10px 0; }
     .export-buttons button {
-      background:#007fa3; color:white; border:none; padding:8px 12px;
-      border-radius:6px; cursor:pointer; font-size:0.9em;
+      background: var(--color-principal); 
+      color:white; 
+      border:none; 
+      padding:8px 12px;
+      border-radius:6px; 
+      cursor:pointer; 
+      font-size:0.9em;
+      transition: background 0.2s ease-in-out;
     }
-    .export-buttons button:hover { background:#005f75; }
+    .export-buttons button:hover { background: var(--color-secundario); }
+    .titulo-pdf {
+      text-align:center;
+      font-weight:bold;
+      font-size:1.6em;
+      color: var(--color-principal);
+      margin-bottom:10px;
+      padding-bottom:5px;
+      border-bottom:2px solid var(--color-principal);
+    }
   </style>
 </head>
 <body>
@@ -114,15 +135,18 @@
         "Última actualización: " + new Date().toLocaleString();
     }
 
-    // 📄 Exportar a PDF SIN botones visibles en el PDF
     function exportarPDF() {
       const botones = document.getElementById('botones');
-      botones.style.display = "none"; // 👀 Oculta los botones en la vista
+      botones.style.display = "none"; 
 
+      const content = document.getElementById('content');
       const area = document.getElementById('titulo-area').textContent;
-      const nombreArchivo = area.toLowerCase().replace(/\s+/g, "_") + ".pdf";
+      const tituloExtra = document.createElement("div");
+      tituloExtra.className = "titulo-pdf";
+      tituloExtra.textContent = area;
+      content.insertBefore(tituloExtra, content.firstChild);
 
-      const element = document.getElementById('content');
+      const nombreArchivo = area.toLowerCase().replace(/\s+/g, "_") + ".pdf";
       const opt = {
         margin: 0.4,
         filename: nombreArchivo,
@@ -131,16 +155,18 @@
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
 
-      html2pdf().set(opt).from(element).save().then(() => {
-        botones.style.display = "flex"; // ✅ Los vuelve a mostrar
+      html2pdf().set(opt).from(content).save().then(() => {
+        tituloExtra.remove();
+        botones.style.display = "flex"; 
       });
     }
 
-    // 📊 Exportar a Excel
     function exportarExcel() {
       const tabla = document.getElementById('tabla-datos');
       const wb = XLSX.utils.table_to_book(tabla, { sheet: "Datos" });
-      XLSX.writeFile(wb, "recepcion_y_pesaje.xlsx");
+      const area = document.getElementById('titulo-area').textContent;
+      const nombreArchivo = area.toLowerCase().replace(/\s+/g, "_") + ".xlsx";
+      XLSX.writeFile(wb, nombreArchivo);
     }
 
     cargar();
