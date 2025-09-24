@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>  
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -36,29 +36,10 @@
       transition: background 0.2s ease-in-out;
     }
     .export-buttons button:hover { background: var(--color-secundario); }
-    .titulo-pdf {
-      text-align:center;
-      font-weight:bold;
-      font-size:1.6em;
-      color: var(--color-principal);
-      margin-bottom:10px;
-      padding-bottom:5px;
-      border-bottom:2px solid var(--color-principal);
-    }
-
-    /* 📄 Evitar que las filas se corten en el PDF */
-    table, tr, td, th {
-      page-break-inside: avoid !important;
-    }
-
-    /* Espacio entre páginas en el PDF */
-    .content {
-      page-break-inside: auto;
-    }
   </style>
 </head>
 <body>
-  <header><h1 id="titulo-area">Prensado</h1></header>
+  <header><h1 id="titulo-area">Cocción</h1></header>
   <div class="content" id="content">
     <!-- RESPONSABLES -->
     <div class="responsables" id="responsables">Cargando responsables...</div>
@@ -78,8 +59,11 @@
 
   <!-- Librerías necesarias -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- 📄 jsPDF + autoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
 
   <script>
     function normalizar(texto) {
@@ -145,31 +129,62 @@
         "Última actualización: " + new Date().toLocaleString();
     }
 
-    function exportarPDF() {
-      const botones = document.getElementById('botones');
-      botones.style.display = "none"; 
+    async function exportarPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
 
-      const content = document.getElementById('content');
-      const area = document.getElementById('titulo-area').textContent;
-      const tituloExtra = document.createElement("div");
-      tituloExtra.className = "titulo-pdf";
-      tituloExtra.textContent = area;
-      content.insertBefore(tituloExtra, content.firstChild);
+      const area = document.getElementById("titulo-area").textContent;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.setTextColor(4, 51, 102);
+      doc.text(area, doc.internal.pageSize.getWidth() / 2, 40, { align: "center" });
 
-      const nombreArchivo = area.toLowerCase().replace(/\s+/g, "_") + ".pdf";
-      const opt = {
-        margin: 0.4,
-        filename: nombreArchivo,
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: { scale: 3, useCORS: true },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all','css','legacy'] } // 🔑 Evita cortes en filas
-      };
+      // RESPONSABLES en el PDF
+      const listaResponsables = document.querySelectorAll("#responsables li");
+      if (listaResponsables.length > 0) {
+        doc.setFontSize(12);
+        doc.setTextColor(0);
+        doc.text("Responsables:", 40, 70);
+        let y = 90;
+        listaResponsables.forEach(li => {
+          doc.text("• " + li.textContent, 50, y);
+          y += 15;
+        });
+      }
 
-      html2pdf().set(opt).from(content).save().then(() => {
-        tituloExtra.remove();
-        botones.style.display = "flex"; 
+      // TABLA
+      const tabla = document.getElementById("tabla-datos");
+      if (!tabla) {
+        alert("No hay datos para exportar.");
+        return;
+      }
+
+      const headers = Array.from(tabla.querySelectorAll("thead th")).map(th => th.innerText);
+      const rows = Array.from(tabla.querySelectorAll("tbody tr")).map(tr =>
+        Array.from(tr.querySelectorAll("td")).map(td => td.innerText)
+      );
+
+      doc.autoTable({
+        head: [headers],
+        body: rows,
+        startY: listaResponsables.length > 0 ? 110 + (listaResponsables.length * 15) : 80,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [4, 51, 102], textColor: [255, 255, 255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [240, 244, 248] },
+        columnStyles: { 0: { cellWidth: 'auto' } },
+        didDrawPage: function (data) {
+          doc.setFontSize(10);
+          doc.setTextColor(100);
+          doc.text(
+            "Generado el: " + new Date().toLocaleString(),
+            data.settings.margin.left,
+            doc.internal.pageSize.height - 10
+          );
+        }
       });
+
+      doc.save(area.toLowerCase().replace(/\s+/g, "_") + ".pdf");
     }
 
     function exportarExcel() {
